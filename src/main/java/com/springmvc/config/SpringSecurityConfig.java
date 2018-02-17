@@ -1,5 +1,6 @@
 package com.springmvc.config;
 
+import com.springmvc.authenticationProvider.CustomAuthenticationProvider;
 import com.springmvc.entity.User;
 import com.springmvc.filters.LoggingFilter;
 import com.springmvc.repositories.UserRepository;
@@ -33,19 +34,24 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     LoggingFilter loggingFilter;
 
+    @Autowired
+    CustomAuthenticationProvider customAuthenticationProvider;
+
     @PostConstruct
     void postConstruct() {
         User user = new User();
         user.setUsername("user");
         user.setPassword(passwordEncoder().encode("pass"));
         userRepository.save(user);
+        User user1 = new User();
+        user1.setUsername("user1");
+        user1.setPassword(passwordEncoder().encode("pass1"));
+        userRepository.save(user1);
     }
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder managerBuilder) throws Exception {
-        managerBuilder.authenticationProvider(runAsAuthenticationProvider())
-                .authenticationProvider(daoAuthenticationProvider());
-
+        managerBuilder.authenticationProvider(customAuthenticationProvider);
     }
 
     @Override
