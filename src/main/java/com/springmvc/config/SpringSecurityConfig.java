@@ -13,7 +13,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     public void configureGlobal(AuthenticationManagerBuilder managerBuilder) throws Exception {
         managerBuilder
                 .inMemoryAuthentication()
-                .withUser("user").password("pass").roles("USER");
+                .withUser("user").password("pass").roles("USER").and()
+                .withUser("user1").password("pass2").roles("ADMIN");
     }
 
     @Override
