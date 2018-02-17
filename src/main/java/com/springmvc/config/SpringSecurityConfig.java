@@ -13,6 +13,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +39,11 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     CustomAuthenticationProvider customAuthenticationProvider;
 
+    @Bean
+    SessionRegistry sessionRegistry(){
+        return new SessionRegistryImpl();
+    }
+
     @PostConstruct
     void postConstruct() {
         User user = new User();
@@ -51,7 +58,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder managerBuilder) throws Exception {
-        managerBuilder.authenticationProvider(customAuthenticationProvider);
+        managerBuilder.authenticationProvider(daoAuthenticationProvider());
     }
 
     @Override
@@ -67,7 +74,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .logout()
                 .permitAll()
-                .logoutRequestMatcher(new AntPathRequestMatcher("/doLogout", "GET"));
+                .logoutRequestMatcher(new AntPathRequestMatcher("/doLogout", "GET"))
+                .and().sessionManagement().maximumSessions(1).sessionRegistry(sessionRegistry());
     }
 
     @Bean
