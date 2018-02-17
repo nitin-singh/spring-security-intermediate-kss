@@ -1,6 +1,7 @@
 package com.springmvc.config;
 
 import com.springmvc.entity.User;
+import com.springmvc.filters.LoggingFilter;
 import com.springmvc.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -14,12 +15,12 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.crypto.password.StandardPasswordEncoder;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import javax.annotation.PostConstruct;
-import javax.sql.DataSource;
-import java.util.Date;
+
 @EnableWebSecurity
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
@@ -29,8 +30,11 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    LoggingFilter loggingFilter;
+
     @PostConstruct
-    void postConstruct(){
+    void postConstruct() {
         User user = new User();
         user.setUsername("user");
         user.setPassword(passwordEncoder().encode("pass"));
@@ -40,13 +44,14 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder managerBuilder) throws Exception {
         managerBuilder.authenticationProvider(runAsAuthenticationProvider())
-        .authenticationProvider(daoAuthenticationProvider());
+                .authenticationProvider(daoAuthenticationProvider());
 
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
+                .addFilterBefore(loggingFilter, AnonymousAuthenticationFilter.class)
                 .csrf()
                 .disable()
                 .authorizeRequests()
@@ -56,26 +61,35 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .logout()
                 .permitAll()
-                .logoutRequestMatcher(new AntPathRequestMatcher("/doLogout","GET"));
+                .logoutRequestMatcher(new AntPathRequestMatcher("/doLogout", "GET"));
     }
 
     @Bean
-    PasswordEncoder passwordEncoder(){
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(11);
     }
 
     @Bean
-    public AuthenticationProvider runAsAuthenticationProvider(){
+    public AuthenticationProvider runAsAuthenticationProvider() {
         RunAsImplAuthenticationProvider runAsImplAuthenticationProvider = new RunAsImplAuthenticationProvider();
         runAsImplAuthenticationProvider.setKey("MyRunAsKey");
         return runAsImplAuthenticationProvider;
     }
 
     @Bean
-    public AuthenticationProvider daoAuthenticationProvider(){
+    public AuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
         daoAuthenticationProvider.setUserDetailsService(userDetailsService);
         daoAuthenticationProvider.setPasswordEncoder(passwordEncoder());
         return daoAuthenticationProvider;
+    }
+
+    @Bean
+    SwitchUserFilter switchUserFilter() {
+        SwitchUserFilter switchUserFilter = new SwitchUserFilter();
+        switchUserFilter.setUserDetailsService(userDetailsService);
+        switchUserFilter.setSwitchUserUrl("/switch/user");
+        switchUserFilter.setTargetUrl("/");
+        return switchUserFilter;
     }
 }
